@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Controle de Portão</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 40px auto;
+      }
+      .status {
+        margin-top: 16px;
+        padding: 8px;
+        border-radius: 4px;
+        background: #f4f4f4;
+      }
+      .alerta {
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 4px;
+        background: #ffdddd;
+        border: 1px solid #ff6666;
+        font-weight: bold;
+      }
+      button {
+        margin-right: 8px;
+        padding: 8px 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Controle de Portão</h1>
+
+    <p>
+      Esta aplicação usa sua localização para autorizar a abertura/fechamento do
+      portão.
+    </p>
+
+    <div>
+      <button id="btn-open">Abrir portão</button>
+      <button id="btn-close">Fechar portão</button>
+    </div>
+
+    <div id="status" class="status"></div>
+    <div id="alerta" class="alerta" style="display: none"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
