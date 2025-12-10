@@ -4,9 +4,13 @@ const statusEl = document.getElementById("status");
 const alertaEl = document.getElementById("alerta");
 const btnOpen = document.getElementById("btn-open");
 const btnClose = document.getElementById("btn-close");
+const headerP = document.querySelector("header p");
 
-function setStatus(msg) {
+let currentLocation = null;
+
+function setStatus(msg, isError = false) {
   statusEl.textContent = msg;
+  statusEl.style.color = isError ? "var(--danger-color)" : "var(--text-color)";
 }
 
 function showAlert(msg) {
@@ -14,56 +18,84 @@ function showAlert(msg) {
   alertaEl.style.display = "block";
 }
 
-function sendGateCommand(action) {
+function updateUI(hasLocation) {
+  btnOpen.disabled = !hasLocation;
+  btnClose.disabled = !hasLocation;
+  if (hasLocation) {
+    headerP.textContent = "Localização obtida. Controles prontos para uso.";
+  } else {
+    headerP.textContent = "Aguardando sinal de GPS para liberar os controles.";
+  }
+}
+
+function initializeLocation() {
   if (!navigator.geolocation) {
-    setStatus("Geolocalização não suportada neste navegador.");
+    setStatus("Geolocalização não é suportada neste navegador.", true);
+    updateUI(false);
     return;
   }
 
-  setStatus("Obtendo localização...");
+  setStatus("Aguardando permissão de localização...");
 
-  navigator.geolocation.getCurrentPosition(
+  navigator.geolocation.watchPosition(
     (pos) => {
-      const payload = {
+      currentLocation = {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
-        action,
       };
-
-      setStatus("Enviando comando para o servidor...");
-
-      fetch(`${NODE_RED_BASE_URL}/gate/action`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      })
-        .then(async (res) => {
-          const text = await res.text().catch(() => "");
-          if (!res.ok) {
-            throw new Error(text || "Erro ao enviar comando.");
-          }
-          return text || "Comando enviado com sucesso.";
-        })
-        // .then((msg) => {
-        //   setStatus(msg);
-        // })
-        .catch((err) => {
-          console.error(err);
-          setStatus("Falha ao enviar comando: " + err.message);
-        });
+      if (btnOpen.disabled) {
+        setStatus("Localização obtida com sucesso!");
+        updateUI(true);
+      }
     },
     (err) => {
       console.error(err);
-      setStatus("Erro ao obter localização: " + err.message);
+      setStatus(`Erro: ${err.message}`, true);
+      updateUI(false);
     },
     {
       enableHighAccuracy: true,
-      timeout: 5000,
+      timeout: 10000,
       maximumAge: 0,
     }
   );
+}
+
+function sendGateCommand(action) {
+  if (!currentLocation) {
+    setStatus("Localização indisponível. Não é possível enviar o comando.", true);
+    return;
+  }
+
+  const actionText = action === "open" ? "Abrindo" : "Fechando";
+  setStatus(`${actionText} o portão...`);
+  // Disable buttons while command is in progress
+  btnOpen.disabled = true;
+  btnClose.disabled = true;
+
+
+  fetch(`${NODE_RED_BASE_URL}/gate/action`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ...currentLocation, action }),
+  })
+    .then(async (res) => {
+      const text = await res.text().catch(() => "");
+      if (!res.ok) {
+        throw new Error(text || "Erro desconhecido do servidor.");
+      }
+      setStatus(`Comando de ${action} enviado com sucesso!`);
+    })
+    .catch((err) => {
+      console.error(err);
+      setStatus(`Falha no comando: ${err.message}`, true);
+    })
+    .finally(() => {
+        // Re-enable buttons after command is complete
+        updateUI(true);
+    });
 }
 
 // Eventos dos botões
@@ -72,11 +104,10 @@ btnClose.addEventListener("click", () => sendGateCommand("close"));
 
 function connectSSE() {
   const url = `${NODE_RED_BASE_URL}/alerts/stream`;
-
   const sse = new EventSource(url);
 
   sse.onopen = () => {
-    setStatus("Conectado para receber alertas em tempo real (SSE).");
+    console.log("Conectado ao SSE para alertas.");
   };
 
   sse.onmessage = (event) => {
@@ -84,12 +115,13 @@ function connectSSE() {
       const data = JSON.parse(event.data);
       if (data.type === "UNAUTHORIZED_OPEN") {
         showAlert(
-          "ALERTA: Portão aberto sem autorização! (" +
-            (new Intl.DateTimeFormat("pt-BR", {
+          `ALERTA: Portão aberto sem autorização! (${new Intl.DateTimeFormat(
+            "pt-BR",
+            {
               dateStyle: "short",
               timeStyle: "short",
-            }).format(new Date(data.timestamp)) || "sem horário informado") +
-            ")"
+            }
+          ).format(new Date(data.timestamp))})`
         );
       } else {
         console.log("Mensagem SSE:", data);
@@ -99,25 +131,12 @@ function connectSSE() {
     }
   };
 
-  //   sse.addEventListener("command", (event) => {
-  //     console.log("Evento SSE 'command':", event);
-  //     const data = JSON.parse(event.data);
-
-  //     if (data.type === "COMMAND_RECEIVED") {
-  //       setStatus(
-  //         `SSE: comando '${data.action}' recebido. ` +
-  //           `lat=${data.lat}, lng=${data.lng}, ts=${data.timestamp}`
-  //       );
-  //     }
-  //   });
-
   sse.onerror = (err) => {
     console.error("Erro no SSE:", err);
-    // Alguns navegadores reabrem automaticamente. Se precisar,
-    // você pode fechar e recriar manualmente:
-    // sse.close();
-    // setTimeout(connectSSE, 5000);
   };
 }
 
+// Initialize
+updateUI(false);
+initializeLocation();
 connectSSE();

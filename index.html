@@ -1,50 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Controle de Portão</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        max-width: 600px;
-        margin: 40px auto;
-      }
-      .status {
-        margin-top: 16px;
-        padding: 8px;
-        border-radius: 4px;
-        background: #f4f4f4;
-      }
-      .alerta {
-        margin-top: 16px;
-        padding: 12px;
-        border-radius: 4px;
-        background: #ffdddd;
-        border: 1px solid #ff6666;
-        font-weight: bold;
-      }
-      button {
-        margin-right: 8px;
-        padding: 8px 12px;
-      }
-    </style>
+    <link rel="stylesheet" href="css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    />
   </head>
   <body>
-    <h1>Controle de Portão</h1>
+    <div class="container">
+      <header>
+        <h1>Controle de Portão</h1>
+        <p>
+          Aguardando sinal de GPS para liberar os controles.
+        </p>
+      </header>
 
-    <p>
-      Esta aplicação usa sua localização para autorizar a abertura/fechamento do
-      portão.
-    </p>
+      <main>
+        <div class="gate-controls">
+          <button id="btn-open" class="btn btn-open" disabled>
+            <i class="fas fa-door-open"></i>
+            Abrir
+          </button>
+          <button id="btn-close" class="btn btn-close" disabled>
+            <i class="fas fa-door-closed"></i>
+            Fechar
+          </button>
+        </div>
 
-    <div>
-      <button id="btn-open">Abrir portão</button>
-      <button id="btn-close">Fechar portão</button>
+        <div class="status-area">
+          <div id="status" class="status"></div>
+          <div id="alerta" class="alerta" style="display: none"></div>
+        </div>
+      </main>
     </div>
-
-    <div id="status" class="status"></div>
-    <div id="alerta" class="alerta" style="display: none"></div>
 
     <script src="app.js"></script>
   </body>
